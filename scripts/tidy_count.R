@@ -3,7 +3,7 @@ library(tidyverse)
 library(cowplot)
 
 read_csv("data/Redlands_counts.csv")
-Redlands_counts <- read_csv("Data/Redlands_counts.csv")
+Redlands_counts <- read_csv("Data/Redlands_counts.csv", header = TRUE)
 
 read_csv("data/redlands_horse_metadata.csv")
 redlands_horse_metadata <- read_csv("Data/redlands_horse_metadata.csv")
@@ -13,14 +13,23 @@ Redlands_counts
 
 redlands_horse_metadata
 
-counts_morethan100 <- Redlands_counts %>% 
-  mutate(sum_counts = s1 +s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9 + s10 + s11 + s12 + s13 + s14 + s15) %>% 
-  filter(sum_counts >= 100)
+#tidy the count data so can join using gather
+redlands_counts_tidy <- Redlands_counts %>%
+  gather(false_id, counts, -gene) %>% 
+  rename(sample = false_id) %>% 
+  left_join(redlands_horse_metadata, by = "sample") %>% 
+  rename(day = condition) %>% 
+  select(-sample) %>% 
+  filter(counts > 100)
 
 
 
-plot_all <- ggplot(data = counts_morethan100,
-                        mapping = aes(x = , y = Temp_min, group = )) + geom_point(alpha = 0.2)
+#making some plots
+plot_counts_day <- ggplot(data = redlands_counts_tidy) +
+  geom_line( mapping = aes(x = day,
+                            y = counts, 
+                            group = animal))
 
 
-?rowSums
+
+
