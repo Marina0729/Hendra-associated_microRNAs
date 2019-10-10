@@ -13,22 +13,19 @@ Redlands_counts
 
 redlands_horse_metadata
 
-#tidy the count data so can join using gather
-redlands_counts_tidy <- Redlands_counts %>%
-  gather(false_id, counts, -gene) %>% 
-  rename(sample = false_id) %>% 
+#tidy the count data 
+redlands_counts_tidy <- Redlands_counts %>%     #assign to new variable
+  gather(sample, counts, -gene) %>%           #gather to get sample names into a column
   left_join(redlands_horse_metadata, by = "sample") %>% 
   rename(day = condition) %>% 
-  select(-sample) %>% 
-  filter(counts > 100)
-
+  select(-sample)
 
 
 #making some plots
 plot_counts_day <- ggplot(data = redlands_counts_tidy) +
-  geom_line( mapping = aes(x = day,
+  geom_point( mapping = aes(x = day,
                             y = counts, 
-                            group = animal))
+                            color = animal))
 
 
 
