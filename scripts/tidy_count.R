@@ -36,7 +36,9 @@ redlands_horse_metadata_tidy <- redlands_horse_metadata %>%
 microRNA_counts_tidy <- microRNA_counts %>%
   gather(sample, counts, -gene) %>%
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%
-  select(-sample)
+  select(-sample) %>% 
+  group_by(gene)
+  summarise(mean_counts = mean(counts))
   
 #Filtering to remove lowly expressed genes
 #Genes with very low counts across all libraries provide little evidence for differential expression and they 
