@@ -51,29 +51,30 @@ microRNA_counts_tidy <- microRNA_counts %>%
 
 d0 <- microRNA_counts_tidy %>% 
   filter(day == 0) %>%
-  filter(counts > 10)
+  filter(counts > 100)
 
 d1 <- microRNA_counts_tidy %>% 
   filter(day == 1 ) %>%
-  filter(counts > 10)
+  filter(counts > 100)
 
 d3 <- microRNA_counts_tidy %>% 
   filter(day == 3 ) %>%
-  filter(counts > 10)
+  filter(counts > 1000)
 
 d5 <- microRNA_counts_tidy %>% 
   filter(day == 5 ) %>%
-  filter(counts > 10)
+  filter(counts > 1000)
 
 d7 <- microRNA_counts_tidy %>% 
   filter(day == 7) %>%
-  filter(counts > 10)
+  filter(counts > 1000)
 
 days0_1 <- full_join(d0, d1)
 
 days3_5 <- full_join(d3, d5)
 
 days0_5 <- full_join(days0_1, days3_5)
+
 
 days0_7 <- full_join(days0_5, d7)
 
@@ -83,17 +84,19 @@ expressedmicroRNA_counts <- days0_7
 
 expressedmicroRNA_counts
 
-
-#summarise by animal 
-expressedmicroRNA_counts %>% 
-  mutate(counts_normalised_to_mir103 =  )
-
-
 #making some plots
 plot_counts_day <- ggplot(data = expressedmicroRNA_counts) +
   geom_point( mapping = aes(x = day,
-                            y = counts, 
-                            group = gene)) + scale_y_log10()
+                            y = counts)) + 
+  facet_wrap(~ gene, nrow = 8) +
+  scale_y_log10() +
+  
+  theme(axis.title = element_text(size = 2), 
+        axis.text.x = element_text(size = 2), 
+        axis.text.y = element_text(size = 5))
+
+
+
 
 
 miR103 <- expressedmicroRNA_counts %>% 
