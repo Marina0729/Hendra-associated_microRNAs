@@ -2,7 +2,8 @@
 library(tidyverse)
 library(cowplot)
 library(modelr)
-
+library(splines)
+library(broom)
 
 read_csv("data/Redlands_counts.csv")                                    #Read in the data 
 microRNA_counts <- read_csv("Data/Redlands_counts.csv")                 #name it microRNA_counts
@@ -14,44 +15,39 @@ microRNA_counts
 
 redlands_horse_metadata
 
-#long winded way of integrating metadata with count data to create unique genes in first column
-counts <- microRNA_counts %>% 
-  rename(h1d0 = s1) %>% 
-  rename(h1d1 = s2) %>% 
-  rename(h1d3 = s3) %>% 
-  rename(h1d5 = s4) %>% 
-  rename(h1d7 = s5) %>% 
-  rename(h2d0 = s6) %>% 
-  rename(h2d1 = s7) %>% 
-  rename(h2d3 = s8) %>% 
-  rename(h2d5 = s9) %>% 
-  rename(h2d7 = s10) %>% 
-  rename(h3d0 = s11) %>% 
-  rename(h3d1 = s12) %>% 
-  rename(h3d3 = s13) %>% 
-  rename(h3d5 = s14) %>% 
-  rename(h3d7 = s15) %>% 
-  select(-h1d0, -h2d0, -h3d0) %>% 
-  filter(h1d1 !=0, h1d3 !=0, h1d5 !=0, h1d7 !=0, h2d1 !=0, h2d3 !=0, h2d5 !=0, h2d7 !=0, h3d1 !=0, h3d3 !=0, h3d5 !=0, h3d7 !=0)
 
-#how about joining the two data frames to create columns with days 
-#must first convert condition column to numeric 
+# joining the two data frames to create columns with days 
+# first convert condition column to numeric 
 
 redlands_horse_metadata_tidy <- redlands_horse_metadata %>% 
-  mutate(day = sub("d","", condition )) %>% 
-  mutate(day = as.numeric(day)) %>% 
-  select(-condition)
+  mutate(day = sub("d","", condition )) %>%                   #make a new column with no "d" from day column
+  mutate(day = as.numeric(day)) %>%                           #convert new column to numeric
+  select(-condition)                                          #remove old "condition" column
 
 #tidy the microRNA_count data and join to metadata 
 microRNA_counts_tidy <- microRNA_counts %>%
-  gather(sample, counts, -gene) %>%
-  left_join(redlands_horse_metadata_tidy, by = "sample") %>%
-  select(-sample)
+  select(-s6) %>%                                             #no sequencing data came back for sample 6, removed from df
+  gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
+  left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
+  select(-sample)                                             #remove the sample column
   
-#Add this pipe if want to calculate mean counts per day  
-  arrange(gene) %>% 
-  group_by(gene, day) %>% 
-  summarise(avg_counts = mean(counts), sd_counts = sd(counts)) %>% 
+#want to determine if the relationship between day and counts is linear for each microRNA
+
+get_lm_se <- function(microRNA_counts_tidy){            #create a variable where we get standard error from lm()
+  fit <- lm(counts ~ day, data = microRNA_counts_tidy)  #fit a linear model to y=counts, x=day using microRNA_counts_tidy
+  data.frame(term = names(fit$coefficients),            #structure the data frame
+             slope = fit$coefficients,                  #return slope coefficient
+             se = summary(fit)$coefficient[,2])         #return standard error coefficient 
+}                                                       #close nested function
+
+microRNA_counts_tidy %>%                             
+  group_by(gene) %>%                                    #apply model by gene
+  do(get_lm_se(.))                                      #do anything function
+
+
+
+    
+    summarise(avg_counts = mean(counts), sd_counts = sd(counts)) %>% 
   mutate(cv = sd_counts / avg_counts) %>% 
   mutate(diff = avg_counts - lag(avg_counts, default = 0)) %>% 
   filter(gene = )
@@ -60,7 +56,9 @@ microRNA_counts_tidy %>%
   spread()
 
 
-#Modelling for each microRNA 
+#Modelling for some microRNAs of interest
+
+#miR103
 miR103 <- microRNA_counts_tidy %>% 
   filter(gene == "eca-miR-103")
 
@@ -68,30 +66,34 @@ miR103
 
 ggplot(miR103, aes(day, counts)) +
   geom_point() +
-  geom_smooth(model = glm)
+  geom_smooth(model = glm) +
+  scale_y_log10()
 
 miR103_mod <- glm(counts ~ day(), data = miR103)
-coef(miR103_mod)
-summary()
-#(Intercept)    day 
-#4958.5041    462.2175 
+summary(miR103_mod)
 
-library(splines)
+coefficient <- coef(miR103_mod)
+coefficient
+slope <- coefficent  
+
+
+
 mod1 <- lm(counts ~ ns(day, 1), data = miR103)
 coef(miR103_mod)
 
+#miR16
 
-miR103 <- microRNA_counts_tidy %>% 
-  filter(gene == "eca-miR-103")
+miR16 <- microRNA_counts_tidy %>% 
+  filter(gene == "eca-miR-16")
 
-miR103
+miR16
 
-ggplot(miR103, aes(day, counts)) +
+ggplot(miR16, aes(day, counts)) +
   geom_point() +
   geom_smooth(model = lm)
 
-miR103_mod <- lm(counts ~ day, data = miR103)
-coef(miR103_mod)
+miR16_mod <- lm(counts ~ day, data = miR16)
+coef(miR16_mod)
 #(Intercept)    day 
 #7942.7833   -106.2167
 
