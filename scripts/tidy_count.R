@@ -31,29 +31,43 @@ microRNA_counts_tidy <- microRNA_counts %>%
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
   select(-sample)                                             #remove the sample column
   
-#want to determine if the relationship between day and counts is linear for each microRNA
+#Too many microRNAs to plot! want to determine if the relationship between day and counts is linear for each microRNA
+#then can filter out those without a linear relationship
 
 get_lm_se <- function(microRNA_counts_tidy){            #create a variable where we get standard error from lm()
   fit <- lm(counts ~ day, data = microRNA_counts_tidy)  #fit a linear model to y=counts, x=day using microRNA_counts_tidy
   data.frame(term = names(fit$coefficients),            #structure the data frame
              slope = fit$coefficients,                  #return slope coefficient
-             se = summary(fit)$coefficient[,2])         #return standard error coefficient 
+             se = summary(fit)$coefficient[,2],         #return standard error coefficient
+             rsq = summary(fit)$r.squared)              #return the r squared 
 }                                                       #close nested function
 
-microRNA_counts_tidy %>%                             
-  group_by(gene) %>%                                    #apply model by gene
+summary(fit)
+
+mod_microRNAs <- microRNA_counts_tidy %>%                             
+  group_by(gene, animal) %>%                            #apply model by gene
   do(get_lm_se(.))                                      #do anything function
 
 
+#remove intercept rows, remove term column and filter out genes with at least one slope = 0 and rsq more than 0.8 
+mod_microRNAs_slopes <- mod_microRNAs %>% 
+  filter(term == "day") %>% 
+  select(-term) %>%
+  group_by(gene) %>% 
+  filter(!any(slope == 0)) %>% 
+  filter(rsq > 0.9) %>% 
+  filter(slope > 1| slope < -1) %>% 
+  filter(gene != "eca-miR-140-3p")
 
-    
-    summarise(avg_counts = mean(counts), sd_counts = sd(counts)) %>% 
-  mutate(cv = sd_counts / avg_counts) %>% 
-  mutate(diff = avg_counts - lag(avg_counts, default = 0)) %>% 
-  filter(gene = )
 
-microRNA_counts_tidy %>% 
-  spread()
+ggplot(data = mod_microRNAs_slopes, mapping = aes(x = gene, 
+                                                  y = slope,
+                                                  color = animal)) + 
+  geom_point() + 
+  geom_linerange(aes(ymin = slope - se, ymax = slope + se))
+
+
+
 
 
 #Modelling for some microRNAs of interest
@@ -67,19 +81,19 @@ miR103
 ggplot(miR103, aes(day, counts)) +
   geom_point() +
   geom_smooth(model = glm) +
-  scale_y_log10()
+  scale_y_log10() +
+  labs(
+  title = "miR103",                      # main title of figure
+  x = "Day post infection",              # x axis title
+  y = "Counts",                          # y axis title
+  color = "Continent"                # title of legend
+) 
 
 miR103_mod <- glm(counts ~ day(), data = miR103)
 summary(miR103_mod)
 
-coefficient <- coef(miR103_mod)
-coefficient
-slope <- coefficent  
-
-
-
 mod1 <- lm(counts ~ ns(day, 1), data = miR103)
-coef(miR103_mod)
+summary(miR103_mod)
 
 #miR16
 
@@ -94,13 +108,6 @@ ggplot(miR16, aes(day, counts)) +
 
 miR16_mod <- lm(counts ~ day, data = miR16)
 coef(miR16_mod)
-#(Intercept)    day 
-#7942.7833   -106.2167
-
-
-
-
-
 
 
 plot_counts_day <- ggplot(data = microRNA_counts_tidy) +
@@ -165,30 +172,4 @@ plot_counts_day <- ggplot(data = expressedmicroRNA_counts) +
   geom_point( mapping = aes(x = day,
                             y = counts)) + 
   facet_wrap(~ gene, nrow = 8) +
-  scale_y_log10() +
-  
-  theme(axis.title = element_text(size = 2), 
-        axis.text.x = element_text(size = 2), 
-        axis.text.y = element_text(size = 5))
-
-
-
-
-
-miR103 <- expressedmicroRNA_counts %>% 
-  filter(gene == "eca-miR-103")
-
-plot_miR103_counts_day <- ggplot(data = miR103) +
-  geom_line( mapping = aes(x = day,
-                            y = counts, 
-                            color = animal))
-
-miR16 <- expressedmicroRNA_counts %>% 
-  filter(gene == "eca-miR-16")
-
-plot_miR16_counts_day <- ggplot(data = miR16) +
-  geom_line( mapping = aes(x = day,
-                           y = counts, 
-                           color = animal))
-
-
+  scale_y_log10()
