@@ -24,13 +24,27 @@ redlands_horse_metadata_tidy <- redlands_horse_metadata %>%
   mutate(day = as.numeric(day)) %>%                           #convert new column to numeric
   select(-condition)                                          #remove old "condition" column
 
-#tidy the microRNA_count data and join to metadata 
+#eliminate s6 and join to metadata 
 microRNA_counts_tidy <- microRNA_counts %>%
+  mutate(counts_nml = )
   select(-s6) %>%                                             #no sequencing data came back for sample 6, removed from df
   gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
   select(-sample)                                             #remove the sample column
-  
+    
+
+#average counts across the three horses
+mean_counts <- microRNA_counts_tidy %>% 
+  group_by(gene, day) %>% 
+  summarise(avg_count = mean(counts)) %>% 
+  filter(avg_count > 10)
+
+#plot the data
+ggplot(data = mean_counts, mapping = aes(x = day, y = avg_count, group = gene)) +
+  geom_line(alpha = 0.2) +
+  scale_y_log10()
+#Al lot of miRs seem to go down after day 5, perhaps we should do a regression on the day 0 to 5 only
+
 #Too many microRNAs to plot! want to determine if the relationship between day and counts is linear for each microRNA
 #then can filter out those without a linear relationship
 
@@ -70,54 +84,34 @@ ggplot(data = mod_microRNAs_slopes, mapping = aes(x = gene,
 
 
 
-#Modelling for some microRNAs of interest
+#plotting for some microRNAs of interest
 
-#miR103
-miR103 <- microRNA_counts_tidy %>% 
-  filter(gene == "eca-miR-103")
+#miR-221
+miR1403p <- microRNA_counts_tidy %>% 
+  filter(gene == "eca-miR-140-3p")
 
-miR103
+miR1403p
 
-ggplot(miR103, aes(day, counts)) +
+plot_miR1403p <- ggplot(miR1403p, aes(x = day, y = counts, color = animal)) +
   geom_point() +
-  geom_smooth(model = glm) +
   scale_y_log10() +
+  stat_summary(aes(y = counts, group = 1), fun.y = mean, colour="red", geom ="line", group = 1) +
   labs(
-  title = "miR103",                      # main title of figure
-  x = "Day post infection",              # x axis title
-  y = "Counts",                          # y axis title
-  color = "Continent"                # title of legend
-) 
+  title = "miR1403p",                      
+  x = "Day post infection",             
+  y = "Counts")                          
 
+ggsave(filename = "results/miR1403p.png", plot = plot_miR1403p, width = 15, height = 15, dpi = 600, units = "cm")
+
+#horse 3 time point 7 is consitently lower in counts across all microRNAs 
+
+
+#getting some stats on the modelling
 miR103_mod <- glm(counts ~ day(), data = miR103)
 summary(miR103_mod)
 
 mod1 <- lm(counts ~ ns(day, 1), data = miR103)
 summary(miR103_mod)
-
-#miR16
-
-miR16 <- microRNA_counts_tidy %>% 
-  filter(gene == "eca-miR-16")
-
-miR16
-
-ggplot(miR16, aes(day, counts)) +
-  geom_point() +
-  geom_smooth(model = lm)
-
-miR16_mod <- lm(counts ~ day, data = miR16)
-coef(miR16_mod)
-
-
-plot_counts_day <- ggplot(data = microRNA_counts_tidy) +
-  geom_point( mapping = aes(x = day,
-                            y = counts)) + 
-  facet_wrap(~ gene, nrow = 8) +
-  scale_y_log10() +
-  theme(axis.title = element_text(size = 2), 
-        axis.text.x = element_text(size = 2), 
-        axis.text.y = element_text(size = 5))
 
 
   
@@ -134,23 +128,23 @@ plot_counts_day <- ggplot(data = microRNA_counts_tidy) +
 
 d0 <- microRNA_counts_tidy %>% 
   filter(day == 0) %>%
-  filter(counts > 100)
+  filter(counts > 10)
 
 d1 <- microRNA_counts_tidy %>% 
   filter(day == 1 ) %>%
-  filter(counts > 100)
+  filter(counts > 10)
 
 d3 <- microRNA_counts_tidy %>% 
   filter(day == 3 ) %>%
-  filter(counts > 1000)
+  filter(counts > 10)
 
 d5 <- microRNA_counts_tidy %>% 
   filter(day == 5 ) %>%
-  filter(counts > 1000)
+  filter(counts > 10)
 
 d7 <- microRNA_counts_tidy %>% 
   filter(day == 7) %>%
-  filter(counts > 1000)
+  filter(counts > 10)
 
 days0_1 <- full_join(d0, d1)
 
@@ -173,3 +167,7 @@ plot_counts_day <- ggplot(data = expressedmicroRNA_counts) +
                             y = counts)) + 
   facet_wrap(~ gene, nrow = 8) +
   scale_y_log10()
+
+
+
+
