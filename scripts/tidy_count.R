@@ -4,6 +4,9 @@ library(cowplot)
 library(modelr)
 library(splines)
 library(broom)
+library(reprex)
+
+install.packages("reprex")
 
 read_csv("data/Redlands_counts.csv")                                    #Read in the data 
 microRNA_counts <- read_csv("Data/Redlands_counts.csv")                 #name it microRNA_counts
@@ -24,16 +27,19 @@ redlands_horse_metadata_tidy <- redlands_horse_metadata %>%
   mutate(day = as.numeric(day)) %>%                           #convert new column to numeric
   select(-condition)                                          #remove old "condition" column
 
-#eliminate s6 and join to metadata 
+#eliminate s6 and join to metadata then filter out day 7 for linear regression
 microRNA_counts_tidy <- microRNA_counts %>%
-  mutate(counts_nml = )
   select(-s6) %>%                                             #no sequencing data came back for sample 6, removed from df
   gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
-  select(-sample)                                             #remove the sample column
+  select(-sample) %>%
+  filter(day != 7)
+
+microRNA_counts_tidy %>% 
+  filter(gene == %in%$mod_microRNA_slopes)
     
 
-#average counts across the three horses
+#average counts across the three horses and filtering out lowly expressed microRNAs
 mean_counts <- microRNA_counts_tidy %>% 
   group_by(gene, day) %>% 
   summarise(avg_count = mean(counts)) %>% 
@@ -43,6 +49,7 @@ mean_counts <- microRNA_counts_tidy %>%
 ggplot(data = mean_counts, mapping = aes(x = day, y = avg_count, group = gene)) +
   geom_line(alpha = 0.2) +
   scale_y_log10()
+
 #Al lot of miRs seem to go down after day 5, perhaps we should do a regression on the day 0 to 5 only
 
 #Too many microRNAs to plot! want to determine if the relationship between day and counts is linear for each microRNA
@@ -63,15 +70,14 @@ mod_microRNAs <- microRNA_counts_tidy %>%
   do(get_lm_se(.))                                      #do anything function
 
 
-#remove intercept rows, remove term column and filter out genes with at least one slope = 0 and rsq more than 0.8 
+#remove intercept rows, remove term column and filter out genes with at least one slope = 0 and rsq more than 0.9 
 mod_microRNAs_slopes <- mod_microRNAs %>% 
   filter(term == "day") %>% 
   select(-term) %>%
   group_by(gene) %>% 
   filter(!any(slope == 0)) %>% 
   filter(rsq > 0.9) %>% 
-  filter(slope > 1| slope < -1) %>% 
-  filter(gene != "eca-miR-140-3p")
+  filter(slope > 1| slope < -1)
 
 
 ggplot(data = mod_microRNAs_slopes, mapping = aes(x = gene, 
@@ -81,7 +87,7 @@ ggplot(data = mod_microRNAs_slopes, mapping = aes(x = gene,
   geom_linerange(aes(ymin = slope - se, ymax = slope + se))
 
 
-
+#Want to be able to filter the microRNA_counts tidy data frame using the gene column in this mod_microRNAs_slopes data frame
 
 
 #plotting for some microRNAs of interest
@@ -169,5 +175,26 @@ plot_counts_day <- ggplot(data = expressedmicroRNA_counts) +
   scale_y_log10()
 
 
+slopes <-  mod_microRNAs_slopes %>% 
+  select(gene, slope, rsq)
 
 
+slopes 
+
+lm_genes <- slopes %>% 
+  select(gene)
+
+lm_genes
+
+
+df1 <-  matrix(c("eca-miR-486", -3, 0.9352, "eca-miR-16", -3, 0.9436), nrow=2, ncol=3, byrow = TRUE)
+df1
+
+microRNA_counts_tidy %>% 
+  filter(gene == lm_genes)
+
+(y <- 1:4)
+mean(y)
+  
+bigtibble <- matrix(2584, 3425, 4352, 356, 352, 453, "h1", "h2", "h3", "h1", "h2", "h3", 0, 0, 0, 1, 1, 1, nrow = 6, ncol = 4, byrow = FALSE, dimnames = list(c("mir1","mir1", "mi1","mir1",   c("gene","counts", "animal", "day")))
+bigtibble                    
