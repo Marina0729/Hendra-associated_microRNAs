@@ -5,8 +5,14 @@ library(modelr)
 library(splines)
 library(broom)
 library(reprex)
+library(edgeR)
+library(limma)
+library(org.Mm.eg.db)
+library(RColorBrewer)
+library(gplots)
 
 install.packages("reprex")
+install.packages("gplots")
 
 read_csv("data/Redlands_counts.csv")                                    #Read in the data 
 microRNA_counts <- read_csv("Data/Redlands_counts.csv")                 #name it microRNA_counts
@@ -17,6 +23,75 @@ redlands_horse_metadata <- read_csv("Data/redlands_horse_metadata.csv") #Name it
 microRNA_counts
 
 redlands_horse_metadata
+
+
+#Following RNAseq tutorial 
+#Create a matrix with only counts and gene names as column names 
+
+# Remove first two columns from seqdata
+countdata <- microRNA_counts[,-(1)]
+
+# Store GeneID as rownames
+rownames(countdata) <- microRNA_counts$gene
+
+View(countdata)
+head(countdata)
+
+#first filter out lowly expressed genes 
+#remove s6 and calculate CPM
+
+countdata_nos6 <- countdata %>% select(-"s6")
+
+myCPM <- cpm(countdata_nos6)
+
+#Have a look at the output
+head(myCPM)
+
+# Which values in myCPM are greater than 0.5?
+thresh <- myCPM > 0.5
+# This produces a logical matrix with TRUEs and FALSEs
+head(thresh)
+
+# Summary of how many TRUEs there are in each row
+table(rowSums(thresh))
+
+# we would like to keep genes that have at least 3 TRUES in each row of thresh
+keep <- rowSums(thresh) >= 3
+
+# Subset the rows of countdata to keep the more highly expressed genes
+counts.keep <- countdata_nos6[keep,]
+summary(keep)
+
+#dimensions of tibble. 572 genes have at least three TRUES 
+dim(counts.keep)
+
+# Let's have a look and see whether our threshold of 0.5 does indeed correspond to a count of about 10-15
+# We will look at the first sample
+
+plot(myCPM[,1],countdata_nos6[,1])
+
+# Let us limit the x and y-axis so we can actually look to see what is happening at the smaller counts
+plot(myCPM[,1],countdata[,1],ylim=c(0,50),xlim=c(0,3))
+
+# Add a vertical line at 0.5 CPM
+abline(v=0.5)
+
+
+
+#so will move to creating a DGEList object
+
+
+
+dgeObj <- DGEList(microRNA_counts)
+# have a look at dgeObj
+dgeObj
+# See what slots are stored in dgeObj
+names(dgeObj)
+# Library size information is stored in the samples slot
+dgeObj$samples
+  
+
+
 
 
 # joining the two data frames to create columns with days 
@@ -33,11 +108,9 @@ microRNA_counts_tidy <- microRNA_counts %>%
   gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
   select(-sample) %>%
-  filter(day != 7)
-
-microRNA_counts_tidy %>% 
-  filter(gene == %in%$mod_microRNA_slopes)
-    
+  filter(day != 7) %>% 
+  filter(gene %in% c(mod_microRNAs_slopes$gene))
+  
 
 #average counts across the three horses and filtering out lowly expressed microRNAs
 mean_counts <- microRNA_counts_tidy %>% 
@@ -48,7 +121,8 @@ mean_counts <- microRNA_counts_tidy %>%
 #plot the data
 ggplot(data = mean_counts, mapping = aes(x = day, y = avg_count, group = gene)) +
   geom_line(alpha = 0.2) +
-  scale_y_log10()
+  scale_y_log10() +
+  facet_wrap(~ gene)
 
 #Al lot of miRs seem to go down after day 5, perhaps we should do a regression on the day 0 to 5 only
 
@@ -122,15 +196,6 @@ summary(miR103_mod)
 
   
 #Filtering to remove lowly expressed genes
-#Genes with very low counts across all libraries provide little evidence for differential expression and they 
-#interfere with some of the statistical approximations that are used later in the pipeline. They also add to 
-#the multiple testing burden when estimating false discovery rates, reducing power to detect differentially 
-#expressed genes. These genes should be filtered out prior to further analysis.
-#Want to create a minimum counts threshold present in at least three replicates at each timepoint. Would ususally
-#use CPM or RPKM to account for the different library sizes between samples. But have no information about library 
-#size so will do filtering based on counts. 
-
-#what is the average counts at each time point as these represent replicates?  
 
 d0 <- microRNA_counts_tidy %>% 
   filter(day == 0) %>%
@@ -175,26 +240,4 @@ plot_counts_day <- ggplot(data = expressedmicroRNA_counts) +
   scale_y_log10()
 
 
-slopes <-  mod_microRNAs_slopes %>% 
-  select(gene, slope, rsq)
 
-
-slopes 
-
-lm_genes <- slopes %>% 
-  select(gene)
-
-lm_genes
-
-
-df1 <-  matrix(c("eca-miR-486", -3, 0.9352, "eca-miR-16", -3, 0.9436), nrow=2, ncol=3, byrow = TRUE)
-df1
-
-microRNA_counts_tidy %>% 
-  filter(gene == lm_genes)
-
-(y <- 1:4)
-mean(y)
-  
-bigtibble <- matrix(2584, 3425, 4352, 356, 352, 453, "h1", "h2", "h3", "h1", "h2", "h3", 0, 0, 0, 1, 1, 1, nrow = 6, ncol = 4, byrow = FALSE, dimnames = list(c("mir1","mir1", "mi1","mir1",   c("gene","counts", "animal", "day")))
-bigtibble                    
