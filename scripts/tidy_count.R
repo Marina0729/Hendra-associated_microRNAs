@@ -11,8 +11,6 @@ library(org.Mm.eg.db)
 library(RColorBrewer)
 library(gplots)
 
-install.packages("reprex")
-install.packages("gplots")
 
 read_csv("data/Redlands_counts.csv")                                    #Read in the data 
 microRNA_counts <- read_csv("Data/Redlands_counts.csv")                 #name it microRNA_counts
@@ -102,15 +100,35 @@ redlands_horse_metadata_tidy <- redlands_horse_metadata %>%
   mutate(day = as.numeric(day)) %>%                           #convert new column to numeric
   select(-condition)                                          #remove old "condition" column
 
+
+
+
 #eliminate s6 and join to metadata then filter out day 7 for linear regression
 microRNA_counts_tidy <- microRNA_counts %>%
   select(-s6) %>%                                             #no sequencing data came back for sample 6, removed from df
   gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
-  select(-sample) %>%
-  filter(day != 7) %>% 
+  select(-sample)
+  
+  
+#if I want to filter on output from linear regression  
   filter(gene %in% c(mod_microRNAs_slopes$gene))
   
+#plot data to look at distributions for each gene 
+gene_summaries <- microRNA_counts_tidy %>% 
+  gather(sample, counts, -gene) %>% 
+  left_join(redlands_horse_metadata_tidy, by ="sample") %>% 
+  select(-sample) %>%
+  group_by(gene) %>%
+  summarize(
+    avg_count = mean(counts),
+    avg_log_count = mean(log(1 + counts))
+    )
+
+
+ggplot(gene_summaries, aes(avg_log_count)) +
+  geom_density()
+
 
 #average counts across the three horses and filtering out lowly expressed microRNAs
 mean_counts <- microRNA_counts_tidy %>% 
@@ -124,7 +142,7 @@ ggplot(data = mean_counts, mapping = aes(x = day, y = avg_count, group = gene)) 
   scale_y_log10() +
   facet_wrap(~ gene)
 
-#Al lot of miRs seem to go down after day 5, perhaps we should do a regression on the day 0 to 5 only
+#A lot of miRs seem to go down after day 5, perhaps we should do a regression on the day 0 to 5 only
 
 #Too many microRNAs to plot! want to determine if the relationship between day and counts is linear for each microRNA
 #then can filter out those without a linear relationship
