@@ -20,6 +20,18 @@ redlands_horse_metadata <- read_csv("Data/redlands_horse_metadata.csv") #Name it
 
 microRNA_counts
 
+#count data is not normally distributed, also there are some problems with the data
+
+microRNA_counts %>% 
+  gather(sample, counts, -gene) %>%
+  arrange(sample) %>% 
+  ggplot(microRNA_counts, mapping = aes(x = sample, y= counts)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  labs(
+    title = "Distribution of counts across libraries"
+  )
+
 redlands_horse_metadata
 
 
@@ -110,6 +122,9 @@ microRNA_counts_tidy <- microRNA_counts %>%
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
   select(-sample)
   
+
+
+
   
 #if I want to filter on output from linear regression  
   filter(gene %in% c(mod_microRNAs_slopes$gene))
