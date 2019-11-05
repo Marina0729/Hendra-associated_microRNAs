@@ -20,17 +20,64 @@ redlands_horse_metadata <- read_csv("Data/redlands_horse_metadata.csv") #Name it
 
 microRNA_counts
 
-#count data is not normally distributed, also there are some problems with the data
+#count data is not normally distributed, also there are some problems with
+#the data 1.High dynamic range, heteroskedasticity,
 
-microRNA_counts %>% 
+plot1 <- microRNA_counts %>% 
   gather(sample, counts, -gene) %>%
-  arrange(sample) %>% 
-  ggplot(microRNA_counts, mapping = aes(x = sample, y= counts)) +
+  mutate(sample = sub("s","", sample )) %>% 
+  ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
   geom_boxplot() +
   scale_y_log10() +
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+  theme_bw() +
   labs(
     title = "Distribution of counts across libraries"
   )
+
+#Does variance differ at different ranges? 
+plot1_above1000 <- microRNA_counts %>% 
+  gather(sample, counts, -gene) %>% 
+  mutate(sample = sub("s","", sample )) %>% 
+  filter(counts > 1000) %>% 
+  ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+  theme_bw() +
+  labs(
+    title = "Distribution of counts >1000 across libraries"
+  )
+ 
+plot1_100to1000 <- microRNA_counts %>% 
+  gather(sample, counts, -gene) %>% 
+  mutate(sample = sub("s","", sample )) %>% 
+  filter(counts < 1000 & counts > 100) %>% 
+  ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+  theme_bw() +
+  labs(
+    title = "Distribution of counts between 100 and 1000 across libraries"
+  )
+
+plot1_below100 <- microRNA_counts %>% 
+  gather(sample, counts, -gene) %>% 
+  mutate(sample = sub("s","", sample )) %>% 
+  filter(counts < 100) %>% 
+  ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+  theme_bw() +
+  labs(
+    title = "Distribution of counts below 100 across libraries"
+  )
+
+
+
+
 
 redlands_horse_metadata
 
