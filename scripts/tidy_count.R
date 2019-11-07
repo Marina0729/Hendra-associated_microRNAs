@@ -18,9 +18,7 @@ redlands_horse_metadata <- read_csv("Data/redlands_horse_metadata.csv") #Name it
 
 microRNA_counts
 
-#count data is not normally distributed, also there are some problems with
-#the data i.e. High dynamic range and heteroskedasticity
-
+#Quick look at means and variance across libraries 
 plot1 <- microRNA_counts %>% 
   gather(sample, counts, -gene) %>%
   mutate(sample = sub("s","", sample )) %>% 
@@ -50,9 +48,10 @@ microRNA_counts_tidy <- microRNA_counts %>%                                     
   mutate(library = sub("s","", library)) %>% 
   filter(counts >10)
 
+
 ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha = day)) +
-  geom_boxplot(outlier.shape = NA) +
   geom_jitter(size = 1) +
+  geom_boxplot(outlier.shape = NA, aes(color = NA), alpha = 0.2, show.legend = FALSE) +
   scale_y_log10()+
   scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
   theme_bw() +
@@ -60,21 +59,14 @@ ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha 
     title = "Total miRNA counts"
   )
 
-ggplot(microRNA_counts_tidy, aes( x = animal, y= counts, color = day)) +
-  geom_jitter() +
-  scale_y_log10() +
-  stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean,
-               geom = "crossbar", width = 0.2, color = "red") +
-  theme_bw() +
-  labs(
-    title = "Total miRNA counts"
-  )
 
 #Make some summary stats
 
-
+microRNA_counts_tidy %>% 
+  group_by(library) %>% 
+  summarise(counts_sum = sum(counts)) %>% 
+  ggplot(aes(x = library, y =  ))
   
-
 
 #Does variance differ at different count ranges? 
 plot1_above10000 <- microRNA_counts %>% 
