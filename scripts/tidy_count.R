@@ -26,15 +26,57 @@ plot1 <- microRNA_counts %>%
   mutate(sample = sub("s","", sample )) %>% 
   ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
   geom_boxplot() +
-  geom_jitter() +
-  scale_y_log10()
+  scale_y_log10() +
   scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
   theme_bw() +
   labs(
     title = "Distribution of counts across libraries"
   )
 
-#Does variance differ at different ranges? 
+redlands_horse_metadata
+
+
+redlands_horse_metadata_tidy <- redlands_horse_metadata %>% 
+  mutate(day = sub("d","", condition )) %>%                   #make a new column with no "d" from day column
+  mutate(day = as.numeric(day)) %>%                           #convert new column to numeric
+  select(-condition)                                          #remove old "condition" column
+
+
+#join to metadata
+microRNA_counts_tidy <- microRNA_counts %>%                                            #no sequencing data came back for sample 6, removed from df
+  gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
+  left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
+  rename(library = sample) %>% 
+  mutate(library = sub("s","", library)) %>% 
+  filter(counts >10)
+
+ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha = day)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(size = 1) +
+  scale_y_log10()+
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+  theme_bw() +
+  labs(
+    title = "Total miRNA counts"
+  )
+
+ggplot(microRNA_counts_tidy, aes( x = animal, y= counts, color = day)) +
+  geom_jitter() +
+  scale_y_log10() +
+  stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean,
+               geom = "crossbar", width = 0.2, color = "red") +
+  theme_bw() +
+  labs(
+    title = "Total miRNA counts"
+  )
+
+#Make some summary stats
+
+
+  
+
+
+#Does variance differ at different count ranges? 
 plot1_above10000 <- microRNA_counts %>% 
     gather(sample, counts, -gene) %>% 
     mutate(sample = sub("s","", sample )) %>% 
@@ -48,13 +90,15 @@ plot1_above10000 <- microRNA_counts %>%
       title = "Distribution of counts above 10,000 across libraries"
     )
 
-plot1_above10000 <- microRNA_counts %>% 
+plot1_above10000hist <- microRNA_counts %>% 
   gather(sample, counts, -gene) %>% 
   mutate(sample = sub("s","", sample )) %>% 
   filter(counts > 10000) %>% 
   ggplot(aes(x= counts)) +
-  geom_histogram() +
+  geom_histogram(bins = 20) +
   facet_wrap(~ sample ) +
+  scale_y_log10() +
+  scale_x_log10() +
   theme_bw() +
   labs(
     title = "Distribution of counts above 10,000 across libraries"
@@ -103,10 +147,6 @@ plot1_below100 <- microRNA_counts %>%
   )
 
 plot_grid(plot1_below100, plot1_100to1000, plot1_above1000)
-
-
-
-redlands_horse_metadata
 
 
 #Following RNAseq tutorial 
@@ -181,20 +221,11 @@ dgeObj$samples
 # joining the two data frames to create columns with days 
 # first convert condition column to numeric 
 
-redlands_horse_metadata_tidy <- redlands_horse_metadata %>% 
-  mutate(day = sub("d","", condition )) %>%                   #make a new column with no "d" from day column
-  mutate(day = as.numeric(day)) %>%                           #convert new column to numeric
-  select(-condition)                                          #remove old "condition" column
 
 
 
 
-#eliminate s6 and join to metadata then filter out day 7 for linear regression
-microRNA_counts_tidy <- microRNA_counts %>%
-  select(-s6) %>%                                             #no sequencing data came back for sample 6, removed from df
-  gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
-  left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
-  select(-sample)
+
   
 
 
