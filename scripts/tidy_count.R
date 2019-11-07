@@ -52,15 +52,16 @@ plot1_above10000 <- microRNA_counts %>%
   gather(sample, counts, -gene) %>% 
   mutate(sample = sub("s","", sample )) %>% 
   filter(counts > 10000) %>% 
-  ggplot(microRNA_counts, mapping = aes(y= counts, group = sample)) +
+  ggplot(aes(x= counts)) +
   geom_histogram() +
-  scale_y_log10() +
   facet_wrap(~ sample ) +
   theme_bw() +
   labs(
     title = "Distribution of counts above 10,000 across libraries"
   )
 
+ggplot(aes(x = sample_value)) + geom_histogram() + facet_wrap(~ sample_id) +
+  labs(title = "Height")
 
 plot1_1000to10000 <- microRNA_counts %>% 
   gather(sample, counts, -gene) %>% 
