@@ -4,10 +4,8 @@ library(cowplot)
 library(modelr)
 library(splines)
 library(broom)
-library(reprex)
 library(edgeR)
 library(limma)
-library(org.Mm.eg.db)
 library(RColorBrewer)
 library(gplots)
 
@@ -21,14 +19,15 @@ redlands_horse_metadata <- read_csv("Data/redlands_horse_metadata.csv") #Name it
 microRNA_counts
 
 #count data is not normally distributed, also there are some problems with
-#the data 1.High dynamic range, heteroskedasticity,
+#the data i.e. High dynamic range and heteroskedasticity
 
 plot1 <- microRNA_counts %>% 
   gather(sample, counts, -gene) %>%
   mutate(sample = sub("s","", sample )) %>% 
   ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
   geom_boxplot() +
-  scale_y_log10() +
+  geom_jitter() +
+  scale_y_log10()
   scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
   theme_bw() +
   labs(
@@ -36,17 +35,44 @@ plot1 <- microRNA_counts %>%
   )
 
 #Does variance differ at different ranges? 
-plot1_above1000 <- microRNA_counts %>% 
+plot1_above10000 <- microRNA_counts %>% 
+    gather(sample, counts, -gene) %>% 
+    mutate(sample = sub("s","", sample )) %>% 
+    filter(counts > 10000) %>% 
+    ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
+    geom_boxplot() +
+    scale_y_log10() +
+    scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+    theme_bw() +
+    labs(
+      title = "Distribution of counts above 10,000 across libraries"
+    )
+
+plot1_above10000 <- microRNA_counts %>% 
   gather(sample, counts, -gene) %>% 
   mutate(sample = sub("s","", sample )) %>% 
-  filter(counts > 1000) %>% 
+  filter(counts > 10000) %>% 
+  ggplot(microRNA_counts, mapping = aes(y= counts, group = sample)) +
+  geom_histogram() +
+  scale_y_log10() +
+  facet_wrap(~ sample ) +
+  theme_bw() +
+  labs(
+    title = "Distribution of counts above 10,000 across libraries"
+  )
+
+
+plot1_1000to10000 <- microRNA_counts %>% 
+  gather(sample, counts, -gene) %>% 
+  mutate(sample = sub("s","", sample )) %>% 
+  filter(counts > 1000 | counts < 10000) %>% 
   ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
   geom_boxplot() +
   scale_y_log10() +
   scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
   theme_bw() +
   labs(
-    title = "Distribution of counts >1000 across libraries"
+    title = "Distribution of counts 1000 to 10,000 across libraries"
   )
  
 plot1_100to1000 <- microRNA_counts %>% 
@@ -75,7 +101,7 @@ plot1_below100 <- microRNA_counts %>%
     title = "Distribution of counts below 100 across libraries"
   )
 
-
+plot_grid(plot1_below100, plot1_100to1000, plot1_above1000)
 
 
 
