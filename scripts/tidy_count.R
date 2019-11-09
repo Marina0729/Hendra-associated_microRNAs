@@ -41,14 +41,13 @@ redlands_horse_metadata_tidy <- redlands_horse_metadata %>%
 
 
 #join to metadata
-microRNA_counts_tidy <- microRNA_counts %>%                                            #no sequencing data came back for sample 6, removed from df
+microRNA_counts_tidy <- microRNA_counts %>%                   #no sequencing data came back for sample 6, removed from df
   gather(sample, counts, -gene) %>%                           #gathered all values into sample (key) and counts (value) columns leaving the gene untouched
   left_join(redlands_horse_metadata_tidy, by = "sample") %>%  #join the two tidy data frames by "sample"
   rename(library = sample) %>% 
-  mutate(library = sub("s","", library)) %>% 
-  filter(counts >10)
+  mutate(library = sub("s","", library))
 
-
+#Plot to describe counts across libraries and samples
 ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha = day)) +
   geom_jitter(size = 1) +
   geom_boxplot(outlier.shape = NA, aes(color = NA), alpha = 0.2, show.legend = FALSE) +
@@ -59,13 +58,18 @@ ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha 
     title = "Total miRNA counts"
   )
 
+ggplot(microRNA_counts_tidy, aes( x = gene , y = animal, fill= counts)) + 
+  geom_tile() +
+  facet_wrap( ~ day)
+#not very informative  
 
-#Make some summary stats
-
+#How many counts in each library?
 microRNA_counts_tidy %>% 
   group_by(library) %>% 
   summarise(counts_sum = sum(counts)) %>% 
-  ggplot(aes(x = library, y =  ))
+  ggplot(aes(y = counts_sum, x = library)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))
   
 
 #Does variance differ at different count ranges? 
@@ -142,7 +146,7 @@ plot_grid(plot1_below100, plot1_100to1000, plot1_above1000)
 
 
 #Following RNAseq tutorial 
-#Create a matrix with only counts and gene names as column names 
+#Create a matrix with only counts and gene names as column names so can use cpm() function
 
 # Remove first two columns from seqdata
 countdata <- microRNA_counts[,-(1)]
@@ -166,6 +170,7 @@ head(myCPM)
 # Which values in myCPM are greater than 0.5?
 thresh <- myCPM > 0.5
 # This produces a logical matrix with TRUEs and FALSEs
+
 head(thresh)
 
 # Summary of how many TRUEs there are in each row
@@ -174,15 +179,40 @@ table(rowSums(thresh))
 # we would like to keep genes that have at least 3 TRUES in each row of thresh
 keep <- rowSums(thresh) >= 3
 
+keep
+as_tibble(keep, rownames = "gene")
+
+
 # Subset the rows of countdata to keep the more highly expressed genes
 counts.keep <- countdata_nos6[keep,]
 summary(keep)
+counts.keep
 
 #dimensions of tibble. 572 genes have at least three TRUES 
 dim(counts.keep)
 
 # Let's have a look and see whether our threshold of 0.5 does indeed correspond to a count of about 10-15
-# We will look at the first sample
+#need to convert to tibble and tidy for plotting
+
+microRNA_cpm <- as_tibble(myCPM, rownames = "gene")
+
+microRNA_cpm
+
+microRNA_cpm_tidy <- microRNA_cpm %>%
+  gather(sample, cpm, -gene) %>%                           
+  left_join(redlands_horse_metadata_tidy, by = "sample") %>%  
+  rename(library = sample) %>% 
+  mutate(library = sub("s","", library))
+
+microRNA_counts_tidy_nos6 <- microRNA_counts_tidy %>% 
+  filter(animal != "h2" | day != "0")
+  
+
+counts_cpm <- left_join (microRNA_cpm_tidy, microRNA_counts_tidy_nos6, by = "gene")
+
+myCPM
+countdat_nos6
+microRNA_counts
 
 plot(myCPM[,1],countdata_nos6[,1])
 
