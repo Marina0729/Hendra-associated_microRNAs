@@ -58,6 +58,18 @@ ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha 
     title = "Total miRNA counts"
   )
 
+ggplot(microRNA_counts_tidy, aes( x = library, y= counts, fill = day, color = animal)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  theme_classic() +
+  scale_fill_viridis_c()+
+  scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
+  labs(
+    title = "Total miRNA counts"
+  )
+
+
+
 ggplot(microRNA_counts_tidy, aes( x = gene , y = animal, fill= counts)) + 
   geom_tile() +
   facet_wrap( ~ day)
@@ -135,7 +147,6 @@ plot1_below100 <- microRNA_counts %>%
   filter(counts < 100) %>% 
   ggplot(microRNA_counts, mapping = aes(x = sample, y= counts, group = sample)) +
   geom_boxplot() +
-  scale_y_log10() +
   scale_x_discrete(limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)) +
   theme_bw() +
   labs(
@@ -198,21 +209,26 @@ microRNA_cpm <- as_tibble(myCPM, rownames = "gene")
 
 microRNA_cpm
 
-microRNA_cpm_tidy <- microRNA_cpm %>%
-  gather(sample, cpm, -gene) %>%                           
-  left_join(redlands_horse_metadata_tidy, by = "sample") %>%  
-  rename(library = sample) %>% 
-  mutate(library = sub("s","", library))
+microRNA_counts_nos6 <- microRNA_counts %>% 
+  select(-s6)
 
-microRNA_counts_tidy_nos6 <- microRNA_counts_tidy %>% 
-  filter(animal != "h2" | day != "0")
+microRNA_counts_nos6
+
+microRNA_cpm_tidy <- microRNA_cpm %>%
+  gather(sample, cpm, -gene)                           
   
 
-counts_cpm <- left_join (microRNA_cpm_tidy, microRNA_counts_tidy_nos6, by = "gene")
+combined_cpm_counts <- bind_cols(microRNA_cpm_tidy, microRNA_counts_nos6_tidy) %>% 
+  select(-gene1, -sample1) %>%
+  left_join(redlands_horse_metadata_tidy, by = "sample") %>% 
+  rename(library = sample) %>% 
+  mutate(library = sub("s","", library))
+  
+ggplot(combined_cpm_counts, aes( x = counts, y = cpm)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap( ~ library)
 
-myCPM
-countdat_nos6
-microRNA_counts
+
 
 plot(myCPM[,1],countdata_nos6[,1])
 
