@@ -47,7 +47,7 @@ microRNA_counts_tidy <- microRNA_counts %>%                   #no sequencing dat
   rename(library = sample) %>% 
   mutate(library = sub("s","", library))
 
-#Plot to describe counts across libraries and samples
+#Plots to describe counts across libraries and samples
 ggplot(microRNA_counts_tidy, aes( x = library, y= counts, color = animal, alpha = day)) +
   geom_jitter(size = 1) +
   geom_boxplot(outlier.shape = NA, aes(color = NA), alpha = 0.2, show.legend = FALSE) +
@@ -67,7 +67,6 @@ ggplot(microRNA_counts_tidy, aes( x = library, y= counts, fill = day, color = an
   labs(
     title = "Total miRNA counts"
   )
-
 
 
 ggplot(microRNA_counts_tidy, aes( x = gene , y = animal, fill= counts)) + 
@@ -157,9 +156,10 @@ plot_grid(plot1_below100, plot1_100to1000, plot1_above1000)
 
 
 #Following RNAseq tutorial 
-#Create a matrix with only counts and gene names as column names so can use cpm() function
+#Create a matrix with only counts and gene names as column names so can 
+#use cpm() function
 
-# Remove first two columns from seqdata
+# Remove first column from seqdata
 countdata <- microRNA_counts[,-(1)]
 
 # Store GeneID as rownames
@@ -168,15 +168,47 @@ rownames(countdata) <- microRNA_counts$gene
 View(countdata)
 head(countdata)
 
-#first filter out lowly expressed genes 
 #remove s6 and calculate CPM
-
-countdata_nos6 <- countdata %>% select(-"s6")
+countdata_nos6 <- countdata %>% 
+  select(-s6)
 
 myCPM <- cpm(countdata_nos6)
 
 #Have a look at the output
 head(myCPM)
+tail(myCPM)
+
+# Let's have a look and see whether our threshold of 0.5 does indeed correspond to a count of about 10-15
+#need to convert to tibble and tidy for plotting
+
+microRNA_cpm <- as_tibble(myCPM, rownames = "gene")
+
+tail(microRNA_cpm)
+
+
+microRNA_counts_nos6 <- microRNA_counts %>% 
+  select(-s6)
+
+tail(microRNA_counts_nos6)
+
+microRNA_cpm_tidy <- microRNA_cpm %>%
+  gather(sample, cpm, -gene)                           
+  
+
+combined_cpm_counts <- bind_cols(microRNA_cpm_tidy, microRNA_counts_nos6_tidy) %>% 
+  select(-gene1, -sample1) %>%
+  left_join(redlands_horse_metadata_tidy, by = "sample") %>% 
+  rename(library = sample) %>% 
+  mutate(library = sub("s","", library))
+  
+plot_cpm_counts <- ggplot(combined_cpm_counts, aes( x = counts, y = cpm)) +
+  geom_point(alpha = 0.2) +
+  coord_cartesian(xlim = c(0, 50), ylim = c(0, 3)) +
+  geom_hline(yintercept = 0.5, color = "red", size = 0.5) +
+  facet_wrap( ~ library)
+
+ggsave(filename = "results/cpm_vs_counts.png", plot = plot_cpm_counts)
+
 
 # Which values in myCPM are greater than 0.5?
 thresh <- myCPM > 0.5
@@ -193,6 +225,9 @@ keep <- rowSums(thresh) >= 3
 keep
 as_tibble(keep, rownames = "gene")
 
+#filter combined cpm and counts by keep tibble 
+
+
 
 # Subset the rows of countdata to keep the more highly expressed genes
 counts.keep <- countdata_nos6[keep,]
@@ -202,75 +237,7 @@ counts.keep
 #dimensions of tibble. 572 genes have at least three TRUES 
 dim(counts.keep)
 
-# Let's have a look and see whether our threshold of 0.5 does indeed correspond to a count of about 10-15
-#need to convert to tibble and tidy for plotting
 
-microRNA_cpm <- as_tibble(myCPM, rownames = "gene")
-
-microRNA_cpm
-
-microRNA_counts_nos6 <- microRNA_counts %>% 
-  select(-s6)
-
-microRNA_counts_nos6
-
-microRNA_cpm_tidy <- microRNA_cpm %>%
-  gather(sample, cpm, -gene)                           
-  
-
-combined_cpm_counts <- bind_cols(microRNA_cpm_tidy, microRNA_counts_nos6_tidy) %>% 
-  select(-gene1, -sample1) %>%
-  left_join(redlands_horse_metadata_tidy, by = "sample") %>% 
-  rename(library = sample) %>% 
-  mutate(library = sub("s","", library))
-  
-ggplot(combined_cpm_counts, aes( x = counts, y = cpm)) +
-  geom_point(alpha = 0.5) +
-  facet_wrap( ~ library)
-
-
-
-plot(myCPM[,1],countdata_nos6[,1])
-
-# Let us limit the x and y-axis so we can actually look to see what is happening at the smaller counts
-plot(myCPM[,1],countdata[,1],ylim=c(0,50),xlim=c(0,3))
-
-# Add a vertical line at 0.5 CPM
-abline(v=0.5)
-
-
-
-#so will move to creating a DGEList object
-
-
-
-dgeObj <- DGEList(microRNA_counts)
-# have a look at dgeObj
-dgeObj
-# See what slots are stored in dgeObj
-names(dgeObj)
-# Library size information is stored in the samples slot
-dgeObj$samples
-  
-
-
-
-
-# joining the two data frames to create columns with days 
-# first convert condition column to numeric 
-
-
-
-
-
-
-  
-
-
-
-  
-#if I want to filter on output from linear regression  
-  filter(gene %in% c(mod_microRNAs_slopes$gene))
   
 #plot data to look at distributions for each gene 
 gene_summaries <- microRNA_counts_tidy %>% 
@@ -338,7 +305,7 @@ ggplot(data = mod_microRNAs_slopes, mapping = aes(x = gene,
 
 
 #Want to be able to filter the microRNA_counts tidy data frame using the gene column in this mod_microRNAs_slopes data frame
-
+filter(gene %in% c(mod_microRNAs_slopes$gene))
 
 #plotting for some microRNAs of interest
 
