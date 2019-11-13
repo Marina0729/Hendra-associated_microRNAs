@@ -155,6 +155,12 @@ plot1_below100 <- microRNA_counts %>%
 plot_grid(plot1_below100, plot1_100to1000, plot1_above1000)
 
 
+#PCA analysis to see if 
+microRNA_PCA <- microRNA_counts %>% 
+  column_to_rownames("gene") %>% 
+  scale()
+
+
 #Following RNAseq tutorial 
 #Create a matrix with only counts and gene names as column names so can 
 #use cpm() function
