@@ -156,9 +156,42 @@ plot_grid(plot1_below100, plot1_100to1000, plot1_above1000)
 
 
 #PCA analysis to see if 
-microRNA_PCA <- microRNA_counts %>% 
+microRNA_counts_PCA <- microRNA_counts %>% 
   column_to_rownames("gene") %>% 
+  select(-s6) %>% 
   scale()
+
+# Peform the PCA on the already scaled heat_stress data
+microRNA_PCA <- prcomp(microRNA_PCA)
+
+# Check the summary
+summary(microRNA_PCA)
+
+plot(microRNA_PCA)
+
+PC1_PC2 <- microRNA_PCA$x %>% 
+  as_tibble(rownames = "sample") %>% 
+  separate(sample, into = c("replicate","timepoint"), sep = "_") %>% 
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_text(aes(label = timepoint, color = replicate))
+
+PC1_PC2
+
+PC3_PC4 <- heat_stress_pca$x %>% 
+  as_tibble(rownames = "sample") %>% 
+  separate(sample, into = c("replicate","timepoint"), sep = "_") %>% 
+  ggplot(aes(x = PC3, y = PC4)) +
+  geom_text(aes(label = timepoint, color = replicate))
+
+PC3_PC4
+
+PC4_PC5 <- heat_stress_pca$x %>% 
+  as_tibble(rownames = "sample") %>% 
+  separate(sample, into = c("replicate","timepoint"), sep = "_") %>% 
+  ggplot(aes(x = PC4, y = PC5)) +
+  geom_text(aes(label = timepoint, color = replicate))
+
+PC4_PC5
 
 
 #Following RNAseq tutorial 
